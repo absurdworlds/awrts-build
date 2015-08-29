@@ -2,4 +2,4 @@
 all: example
 
 example:
-	cd source/example; make
+	$(MAKE) -C 'source/example'
