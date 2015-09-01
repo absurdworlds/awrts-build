@@ -11,21 +11,18 @@
 # Objects
 # Executable
 
-#
-# Global configuration {
-Version = 0
 
-# 
-comma = ,
-space :=
-space +=
-# } end global configuration
-#
+# Global configuration
+Version = 0
 
 EXTRAFLAGS=
 
-#
-# Per-project settings {
+# Makefile tricks
+comma = ,
+space :=
+space +=
+
+# Per-project settings
 ifeq ($(Executable),true)
 	InstallDir = $(RootPath)/bin
 	OutputName = $(ProjectName)
@@ -40,20 +37,15 @@ Includes = -I$(RootPath)/include
 Objects = $(patsubst %.cpp, $(BuildDir)/%.o, $(Sources))
 ProjectDefines = $(addprefix -D,$(Defines))
 ProjectDependencies = $(addprefix -l,$(Libraries))
-# end per-project settings }
-#
 
-#
-# User configuration {
+
+# User configuration
 include $(RootPath)/Config.mk
 
-ExtraIncludePaths = $(addprefix -I,$(CONFIG_INCLUDE_PATHS))
-ExtraLibraryPaths = $(addprefix -L,$(CONFIG_LIBRARY_PATHS))
-# } end user configuration
-#
+ExtraIncludePaths = $(addprefix -I$(RootPath),$(CONFIG_INCLUDE_PATHS))
+ExtraLibraryPaths = $(addprefix -L$(RootPath),$(CONFIG_LIBRARY_PATHS))
 
-#
-# Tool configuration {
+# Tool configuration
 MKDIR_P = mkdir -p
 
 CXXFLAGS  = -std=c++14
@@ -65,12 +57,13 @@ CXXFLAGS_DEBUG   = -g -DDEBUG -D_DEBUG
 CXXFLAGS_RELEASE = -O3 -DNDEBUG
 
 CCFLAGS  = -std=c11
-CPPFLAGS = $(ProjectDefines) $(Includes)
-LDFLAGS  = -Wl,-rpath-link,../../lib,-R,'$$ORIGIN/../lib' -L../../lib
+CPPFLAGS = $(ProjectDefines) $(Includes) $(ExtraIncludePaths)
+LDFLAGS  = -Wl,-rpath-link,$(RootPath)/lib,-R,'$$ORIGIN/../lib' -L$(RootPath)/lib
+LDFLAGS += $(ExtraLibraryPaths)
 LDFLAGS += $(ProjectDependencies)
-# } end tool configuration
-#
 
+
+# Build rules
 all: debug
 
 .PHONY:
