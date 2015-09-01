@@ -2,4 +2,4 @@
 all: example
 
 example:
-	$(MAKE) -C 'source/example'
+	$(MAKE) -C 'examples/example'
