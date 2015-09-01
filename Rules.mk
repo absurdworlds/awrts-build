@@ -1,3 +1,10 @@
+# Copyright (C) 2015  hedede <haddayn@gmail.com>
+#
+# License LGPLv3 or later:
+# GNU Lesser GPL version 3 <http://gnu.org/licenses/lgpl-3.0.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
 # All project makefiles must define:
 # ProjectName
 # RootPath
@@ -31,7 +38,9 @@ endif
 BuildDir = $(RootPath)/build/$(ProjectName)
 Includes = -I$(RootPath)/include
 Objects = $(patsubst %.cpp, $(BuildDir)/%.o, $(Sources))
-# end per-dependent settings }
+ProjectDefines = $(addprefix -D,$(Defines))
+ProjectDependencies = $(addprefix -l,$(Libraries))
+# end per-project settings }
 #
 
 #
@@ -56,8 +65,9 @@ CXXFLAGS_DEBUG   = -g -DDEBUG -D_DEBUG
 CXXFLAGS_RELEASE = -O3 -DNDEBUG
 
 CCFLAGS  = -std=c11
-CPPFLAGS = $(Defines) $(Includes)
-LDFLAGS  =  -Wl,-rpath-link,../../lib,-R,'$$ORIGIN/../lib' -L../../lib $(Libraries)
+CPPFLAGS = $(ProjectDefines) $(Includes)
+LDFLAGS  = -Wl,-rpath-link,../../lib,-R,'$$ORIGIN/../lib' -L../../lib
+LDFLAGS += $(ProjectDependencies)
 # } end tool configuration
 #
 
