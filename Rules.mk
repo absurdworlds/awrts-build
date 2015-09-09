@@ -63,8 +63,11 @@ LDFLAGS  = -Wl,-rpath-link,$(RootPath)/lib,-R,'$$ORIGIN/../lib' -L$(RootPath)/li
 LDFLAGS += $(ExtraLibraryPaths)
 LDFLAGS += $(ProjectDependencies)
 
+# Generate dependency files
+ifeq ($(CONFIG_MAKE_DEPENDS),true)
 CCFLAGS  += -MMD -MP
 CXXFLAGS += -MMD -MP
+endif
 
 
 # Build rules
@@ -102,4 +105,6 @@ endif
 clean:
 	-rm $(Objects) $(BuildDir)/$(OutputName)
 
+ifeq ($(CONFIG_MAKE_DEPENDS),true)
 -include $(Depends)
+endif
