@@ -130,7 +130,7 @@ clean:
 	$(PRINTF_RESET)
 	@ rm -f $(Objects) $(BuildDir)/$(OutputName)
 	$(PRINTF_BOLD)
-	$(ECHO) [Done] Removing build files
+	$(ECHO) [Clean] Done
 	$(PRINTF_RESET)
 
 ifeq ($(CONFIG_MAKE_DEPENDS),true)
