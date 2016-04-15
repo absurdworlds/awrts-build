@@ -1,6 +1,6 @@
 RootPath = ../..
-Sources = 
+Sources = example.cpp
 ProjectName = example
-Executable = false
+BuildType = executable
 
 include $(RootPath)/Rules.mk

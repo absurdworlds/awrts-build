@@ -1,3 +1,6 @@
-CONFIG_INCLUDE_PATHS = ../dependencies/include/
-CONFIG_LIBRARY_PATHS = ../dependencies/lib/
+CONFIG_INCLUDE_PATHS =
+CONFIG_LIBRARY_PATHS =
+CONFIG_INCLUDE_REL_PATHS = ../dependencies/include/
+CONFIG_LIBRARY_REL_PATHS = ../dependencies/lib/
 CONFIG_MAKE_DEPENDS  = false
+CONFIG_TOOLCHAIN = mingw

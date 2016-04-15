@@ -12,7 +12,6 @@
 # Objects
 # Executable
 
-
 # Global configuration
 Version = 0
 
@@ -23,79 +22,96 @@ comma = ,
 space :=
 space +=
 
-# Per-project settings
-ifeq ($(Executable),true)
-	InstallDir = $(RootPath)/bin
-else
-	InstallDir = $(RootPath)/lib
-	EXTRAFLAGS += -shared
+# User configuration
+include $(RootPath)/Config.mk
+
+ifndef CONFIG_TOOLCHAIN
+
+CONFIG_TOOLCHAIN = default
+
 endif
+
+include $(RootPath)/toolchain-$(CONFIG_TOOLCHAIN).mk
+
+ifeq      ($(BuildType),executable)
+	InstallDir = $(RootPath)/bin
+	NamePrefix = $(executable_prefix)
+	NameSuffix = $(executable_suffix)
+	Versioning = $(executable_versioning)
+else ifeq ($(BuildType),sharedlib)
+	InstallDir = $(RootPath)/lib
+	NamePrefix = $(sharedlib_prefix)
+	NameSuffix = $(sharedlib_suffix)
+	Versioning = $(sharedlib_versioning)
+	EXTRAFLAGS += -shared
+else ifeq ($(BuildType),staticlib)
+	InstallDir = $(RootPath)/lib
+	NamePrefix = $(staticlib_prefix)
+	NameSuffix = $(staticlib_suffix)
+	Versioning = $(staticlib_versioning)
+	EXTRAFLAGS += -static
+else
+$(error BuildType is incorrect or not defined.)
+endif
+
+ifeq ($(Versioning),true)
+	OutputName = $(NamePrefix)$(ProjectName)$(NameSuffix).$(Version)
+	OutputShortName = $(NamePrefix)$(ProjectName)$(NameSuffix)
+else
+	OutputName = $(NamePrefix)$(ProjectName)$(NameSuffix)
+endif
+
+# Process config
 BuildDir = $(RootPath)/build/$(ProjectName)
 Includes = -I$(RootPath)/include
 Objects = $(patsubst %.cpp, $(BuildDir)/%.o, $(Sources))
 Depends = $(Objects:.o=.d)
-ProjectDefines = $(addprefix -D,$(Defines))
-ProjectDependencies = $(addprefix -l,$(Libraries))
+ProjectDefines      = $(addprefix $(define_prefix),$(Defines))
+ProjectDependencies = $(addprefix $(libpath_prefix),$(Libraries))
 
-
-# User configuration
-include $(RootPath)/Config.mk
-
-ExtraIncludePaths = $(addprefix -I$(RootPath)/,$(CONFIG_INCLUDE_PATHS))
-ExtraLibraryPaths = $(addprefix -L$(RootPath)/,$(CONFIG_LIBRARY_PATHS))
+ExtraIncludePaths = $(addprefix $(incpath_prefix),$(CONFIG_INCLUDE_PATHS))
+ExtraLibraryPaths = $(addprefix $(libpath_prefix),$(CONFIG_LIBRARY_PATHS))
+ExtraIncludePaths+= $(addprefix $(incpath_prefix)$(RootPath)/,$(CONFIG_INCLUDE_REL_PATHS))
+ExtraLibraryPaths+= $(addprefix $(libpath_prefix)$(RootPath)/,$(CONFIG_LIBRARY_REL_PATHS))
 
 # Tool configuration
-MKDIR_P = mkdir -p
-ECHO = @echo
+cxx_flags  = $(compiler_general) $(compiler_debugsyms) $(cxx_std)
+cxx_flags += $(cxx_no_exceptions)
+cxx_flags += $(compiler_visibility_public)
+cxx_flags_debug   = $(cpp_debug)
+cxx_flags_release = $(compiler_optimize_full) $(cpp_nodebug)
 
-CXXFLAGS  = -std=c++14
-CXXFLAGS += -fno-exceptions
-CXXFLAGS += -fvisibility=default
-CXXFLAGS += -fdiagnostics-color=auto
-CXXFLAGS_DEBUG   = -g -DDEBUG -D_DEBUG
-CXXFLAGS_RELEASE = -O3 -DNDEBUG
+cc_flags  = $(compiler_general) $(cc_std)
+cpp_flags = $(ProjectDefines) $(Includes) $(ExtraIncludePaths)
 
-CCFLAGS  = -std=c11
-CPPFLAGS = $(ProjectDefines) $(Includes) $(ExtraIncludePaths)
-LDFLAGS  = -Wl,-rpath-link,$(RootPath)/lib,-R,'$$ORIGIN/../lib' -L$(RootPath)/lib
-LDFLAGS += $(ExtraLibraryPaths)
-LDFLAGS += $(ProjectDependencies)
+linker_flags  = $(linker_relpath) $(linker_libpath)
+linker_flags += $(ExtraLibraryPaths)
+linker_flags += $(ProjectDependencies)
 
 # Generate dependency files
 ifeq ($(CONFIG_MAKE_DEPENDS),true)
-CCFLAGS  += -MMD -MP
-CXXFLAGS += -MMD -MP
+cc_flags  += $(make_depends)
+cxx_flags += $(make_depends)
 endif
-
-# Colors
-PRINTF = @printf
-PRINTF_BOLD =$(PRINTF) '\033[1m'
-PRINTF_RED  =$(PRINTF) '\033[31m'
-PRINTF_RESET=$(PRINTF) '\033[0m'
 
 # Build rules
 all: debug
 
 .PHONY: debug
-debug: CXXFLAGS+=$(CXXFLAGS_DEBUG)
+debug: cxx_flags+=$(cxx_flags_debug)
 debug: Build Install
 
 .PHONY: release
-release: CXXFLAGS+=$(CXXFLAGS_RELEASE)
+release: cxx_flags+=$(cxx_flags_release)
 release: Build Install
 
-ifeq ($(CONFIG_TOOLCHAIN),mingw)
-include $(RootPath)/Rules-mingw.mk
-else
-include $(RootPath)/Rules-default.mk
-endif
 
 $(BuildDir)/%.o: %.cpp
 	$(PRINTF_BOLD)
 	$(ECHO) [Build] Compiling $@
 	$(PRINTF_RESET)
 	@ $(MKDIR_P) $(dir $@)
-	@ $(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	@ $(CXX) $(cpp_flags) $(cxx_flags) -c $< -o $@
 
 Build: $(Objects)
 	@ $(MKDIR_P) $(BuildDir)
@@ -103,7 +119,7 @@ Build: $(Objects)
 	$(ECHO) [Build] Linking object files.
 	$(PRINTF_RESET)
 	@ $(CXX) $(EXTRAFLAGS) -o $(BuildDir)/$(OutputName) \
-	$(CPPFLAGS) $(CXXFLAGS) $(Objects) $(LDFLAGS)
+	$(cpp_flags) $(cxx_flags) $(Objects) $(ld_flags)
 	$(PRINTF_BOLD)
 	$(ECHO) [Build] Done.
 	$(PRINTF_RESET)
@@ -114,7 +130,7 @@ Install: Build
 	$(PRINTF_RESET)
 	@ $(MKDIR_P) $(InstallDir)
 	@ cp $(BuildDir)/$(OutputName) $(InstallDir)/$(OutputName)
-ifeq ($(CreateSymlinks),true)
+ifeq ($(Versioning),true)
 	$(PRINTF_BOLD)
 	$(ECHO) [Install] Creating symlink $(OutputShortName) to $(OutputName).
 	$(PRINTF_RESET)
