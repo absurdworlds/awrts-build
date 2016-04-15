@@ -26,12 +26,9 @@ space +=
 # Per-project settings
 ifeq ($(Executable),true)
 	InstallDir = $(RootPath)/bin
-	OutputName = $(ProjectName)
 else
 	InstallDir = $(RootPath)/lib
-	OutputShortName = lib$(ProjectName).so
-	OutputName = $(OutputShortName).$(Version)
-	EXTRAFLAGS += -shared 
+	EXTRAFLAGS += -shared
 endif
 BuildDir = $(RootPath)/build/$(ProjectName)
 Includes = -I$(RootPath)/include
@@ -52,7 +49,6 @@ MKDIR_P = mkdir -p
 ECHO = @echo
 
 CXXFLAGS  = -std=c++14
-CXXFLAGS += -fPIC
 CXXFLAGS += -fno-exceptions
 CXXFLAGS += -fvisibility=default
 CXXFLAGS += -fdiagnostics-color=auto
@@ -73,20 +69,26 @@ endif
 
 # Colors
 PRINTF = @printf
-PRINTF_BOLD=$(PRINTF) '\033[1m'
-PRINTF_RED=$(PRINTF) '\033[31m'
+PRINTF_BOLD =$(PRINTF) '\033[1m'
+PRINTF_RED  =$(PRINTF) '\033[31m'
 PRINTF_RESET=$(PRINTF) '\033[0m'
 
 # Build rules
-all: debug install
+all: debug
 
 .PHONY: debug
 debug: CXXFLAGS+=$(CXXFLAGS_DEBUG)
-debug: Build
+debug: Build Install
 
-.PHONY: release  
+.PHONY: release
 release: CXXFLAGS+=$(CXXFLAGS_RELEASE)
-release: Build
+release: Build Install
+
+ifeq ($(CONFIG_TOOLCHAIN),mingw)
+include $(RootPath)/Rules-mingw.mk
+else
+include $(RootPath)/Rules-default.mk
+endif
 
 $(BuildDir)/%.o: %.cpp
 	$(PRINTF_BOLD)
@@ -106,13 +108,13 @@ Build: $(Objects)
 	$(ECHO) [Build] Done.
 	$(PRINTF_RESET)
 
-install: Build
+Install: Build
 	$(PRINTF_BOLD)
 	$(ECHO) [Install] Copying $(OutputName)
 	$(PRINTF_RESET)
 	@ $(MKDIR_P) $(InstallDir)
 	@ cp $(BuildDir)/$(OutputName) $(InstallDir)/$(OutputName)
-ifeq ($(Executable),false)
+ifeq ($(CreateSymlinks),true)
 	$(PRINTF_BOLD)
 	$(ECHO) [Install] Creating symlink $(OutputShortName) to $(OutputName).
 	$(PRINTF_RESET)
@@ -122,7 +124,6 @@ endif
 	$(ECHO) [Install] Done.
 	$(PRINTF_RESET)
 
-
 .PHONY : clean
 clean: 
 	$(PRINTF_BOLD)
@@ -130,7 +131,7 @@ clean:
 	$(PRINTF_RESET)
 	@ rm -f $(Objects) $(BuildDir)/$(OutputName)
 	$(PRINTF_BOLD)
-	$(ECHO) [Clean] Done
+	$(ECHO) [Clean] Done.
 	$(PRINTF_RESET)
 
 ifeq ($(CONFIG_MAKE_DEPENDS),true)
